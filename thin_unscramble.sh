@@ -12,7 +12,7 @@ EOF
    exit 1
 }
 
-PREFIX='test'
+PREFIX='thin'
 
 [ -z "$1" -o -z "$2" ] && usage;
 TPOOLFILE="$1"
