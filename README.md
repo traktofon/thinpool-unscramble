@@ -1,8 +1,8 @@
-Unf$#!ck My Thin Pool
+Unf$#!ck My Thinpool
 =====================
 
-So you are using Linux LVM with a thin pool and one day (probably after a reboot)
-you want to activate the LVs on this thin pool and you get a message about
+So you are using Linux LVM with a thinpool and one day (probably after a reboot)
+you want to activate the LVs on this thinpool and you get a message about
 mismatching `transaction_id`s. None of your thin LVs are accessible. What to do?
 
 Well I'm not exactly sure what to do, but here's what I did anyway. I managed to
@@ -13,41 +13,41 @@ Notation
 --------
 
 * Name of the volume group: `vg0`
-* Name of the thin pool: `vg0/tpool`
+* Name of the thinpool: `vg0/tpool`
 * LVM metadata backup is in the file `/etc/lvm/backup/vg0`
 
 
 Step 1: Try the repair tools
 ----------------------------
 
-Try to repair the thin pool metadata:
+Try to repair the thinpool metadata:
 
 ```bash
 lvconvert --repair vg0/tpool
 ```
 
-This creates a "repaired" copy of the thin pool's metadata on a new LV,
+This creates a "repaired" copy of the thinpool's metadata on a new LV,
 `tpool_meta0`. (The original metadata volume is `tpool_tmeta` but it is
 hidden, so LVM doesn't let you access it directly.)
 
-You can now try to activate the thin pool again, and LVM will try to
+You can now try to activate the thinpool again, and LVM will try to
 swap in the new metadata for the old one:
 
 ```bash
 lvchange -aey -v vg0/tpool
 ```
 
-If you are lucky, your thin pool and its LVs gets activated, and you
+If you are lucky, your thinpool and its LVs gets activated, and you
 are back in business. Congratulations! If not, read on.
 
 
-Step 2: Extract the data portion of the thin pool
+Step 2: Extract the data portion of the thinpool
 -------------------------------------------------
 
-An LVM thin pool actually consists of two LVs, one for the data portion
+An LVM thinpool actually consists of two LVs, one for the data portion
 and one for the metadata, called `tpool_tdata` and `tpool_tmeta` respectively.
 But LVM hides these volumes, and I found no way to access the data portion
-without activating the thin pool (which, as mentioned, fails).
+without activating the thinpool (which, as mentioned, fails).
 
 So we need to do it manually.  
 Find the entry for `tpool_tdata` in the LVM metadata backup.
@@ -85,16 +85,16 @@ your `tpool`'s data portion into a file:
 dd if=/dev/path/to/pv0 of=tpool.dat bsize=1M skip=$[1+4*8602] count=$[4*20480]
 ```
 
-Now `tpool.dat` is an image of your thin pool's data portion.
+Now `tpool.dat` is an image of your thinpool's data portion.
 
 If your `tpool_tdata` LV is made up of more than one segment... good luck.
 Ask someone who knows. Or maybe an educated guess will do.
 
 
-Step 3: Extract the thin pool's metadata
+Step 3: Extract the thinpool's metadata
 ----------------------------------------
 
-Now we will extract the metadata of the thin pool in a form that we can understand and
+Now we will extract the metadata of the thinpool in a form that we can understand and
 process. In contrast to the hidden `tpool_tmeta` LV, the `tpool_meta0` created above by
 `lvconvert --repair` is directly accessible, and after activation it can be
 dumped with a tool from the `thin-provisioning-tools` package:
@@ -121,7 +121,7 @@ The resulting XML file looks something like this:
 </superblock>
 ```
 
-The `nr_data_blocks` tells you how many blocks are in the thin pool. How big is a block?
+The `nr_data_blocks` tells you how many blocks are in the thinpool. How big is a block?
 Check the entry for the `tpool` LV in the LVM metadata backup, it should contain a
 `chunk_size` entry. In my case this is 128, which means 64 kiB.
 
@@ -166,7 +166,7 @@ got lost from the LVM metadata.)
 
 Note that the thin LV images are sparse, and that their size might be smaller
 than the original thin LV. This happens if the final blocks of the thin LV
-had never been written to, so no blocks from the thin pool's data portion were
+had never been written to, so no blocks from the thinpool's data portion were
 ever mapped to them. For thin LVs that are present in the LVM metadata backup,
 you can find their original size from the `extent_count` setting in their LVM
 metadata entry. (Remember, one extent is 4 MiB.) Then you can use the
